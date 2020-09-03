@@ -8,7 +8,7 @@ Alexandra = ['Tim Hatcher','Glenn Van Eijk','Conor Gribbin','Adriaan Welgraven',
 Veronica = ['Ayse Feyzanur Ermurat','Raffaele Talarico','Daniele Sarno','Francesc Callejas','Francesco Bastianello','Hur Bakan','Jorge Sanchez','Josefina Furrer','Josep Martin','Luca Fatigati','Marco De Rossi','Selene Hernandez']
 Alaa = ['Abdollah MOSTAFA','Ahmed ABDELAAL','Mariam YEHIA','Mohamed SADAT','Monica YOUSSEF','Obada SAYED','Samar ALEZABY','Clotilde Demeyer','Constance de Kertanguy','Ilias Bensaid','Vianney Dufour','Kim Do Tri']
 
-quarters = ['2019-Q3','2019-Q4','2020-Q1','2020-Q2','2020-Q3','2020-Q4']
+quarters = ['2020-Q1','2020-Q2','2020-Q3','2020-Q4','2021-Q1','2021-Q2']
 
 names = Alaa + Alexandra + Veronica
 
@@ -120,7 +120,7 @@ for name in names:
         contribution.iloc[2] = contribution.iloc[0] + (contribution.iloc[1] *2.5)
 
         #make an investment Resource sorted by name
-        IRN = IR[IR['Resource Display Name'] == name]
+        IRN = IR[IR['Employee Name'] == name]
 
         try:
             #Find top countries where time is spent and sort them by current quarter and % out of total time spent.

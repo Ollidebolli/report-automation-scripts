@@ -23,11 +23,11 @@ C_new.set_index('Opp ID (Hyperlink)', inplace=True)
 Resource = pd.read_csv('Presales Investment - Resource Details.csv')
 
 Managers = np.array(['Veronica Bastianon', 'Alaa ELGANAGY', 'Alexandra Jovovic'])
-Nature = np.where(np.isin(Resource['Resource Manager'], Managers) == True, 'GB Presales','Field Presales')
+Nature = np.where(np.isin(Resource['Employee Manager'], Managers) == True, 'GB Presales','Field Presales')
 Resource['NATURE'] = Nature
 
 #Create a pivot table thats sorts working hours based on field or GB
-pivot = pd.pivot_table(Resource, values='Activity Days',columns='NATURE', index='Opportunity Id', aggfunc=np.sum)
+pivot = pd.pivot_table(Resource, values='Time Recorded Days',columns='NATURE', index='Opportunity Id', aggfunc=np.sum)
 new_IR = pd.DataFrame()
 new_IR['op id'] = pivot.index
 new_IR['Field Presales'] = pivot['Field Presales'].to_numpy()
