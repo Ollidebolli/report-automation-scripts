@@ -33,7 +33,6 @@ MH = pd.read_csv(glob.glob('*Missing' + '*.csv')[0])
 #Open Activity analysis report
 AA = pd.read_csv(glob.glob('*Time Recorded' + '*.csv')[0])
 
-
 #Sort Pipeline support report, drop last row, combine them together etc etc
 OP.drop(OP.tail(1).index,inplace=True)
 CL.drop(CL.tail(1).index,inplace=True)
@@ -124,7 +123,7 @@ for name in names:
 
         try:
             #Find top countries where time is spent and sort them by current quarter and % out of total time spent.
-            countries = pd.DataFrame(IRN.groupby(['Opp Close Quarter', 'Market Unit'])['Activity Days'].sum()).unstack(0)
+            countries = pd.DataFrame(IRN.groupby(['Opp Close Quarter', 'Market Unit'])['Time Recorded Days'].sum()).unstack(0)
             countries.columns = countries.columns.droplevel()
             countries.sort_values(by=countries.columns[0], ascending=False, inplace=True)
             countries = countries / countries.sum(axis=0) * 100
@@ -205,7 +204,7 @@ for name in names:
         productivity.iloc[3] = MH_name.iloc[1]
 
         #min max and average MD
-        name_MD = IRN.groupby(['Investment Quarter','Global Ultimate Name'])['Activity Days'].sum().unstack(0)
+        name_MD = IRN.groupby(['Investment Quarter','Global Ultimate Name'])['Time Recorded Days'].sum().unstack(0)
         productivity.iloc[4] = name_MD.min()
         productivity.iloc[5] = name_MD.max()
         productivity.iloc[6] = name_MD.mean()
