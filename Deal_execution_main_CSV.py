@@ -20,7 +20,7 @@ if str(C_new['Opp ID (Hyperlink)'][C_new.index[0]])[0] != '0':
 OP_new.set_index('Opp ID (Hyperlink)', inplace=True)
 C_new.set_index('Opp ID (Hyperlink)', inplace=True)
 
-Resource = pd.read_csv('Presales Investment - Resource Details.csv')
+Resource = pd.read_csv('Presales Investment - Employee Details.csv')
 
 Managers = np.array(['Veronica Bastianon', 'Alaa ELGANAGY', 'Alexandra Jovovic'])
 Nature = np.where(np.isin(Resource['Employee Manager'], Managers) == True, 'GB Presales','Field Presales')
@@ -83,28 +83,29 @@ FINAL_ON_PREM = pd.DataFrame(index=OP_new.index)
 FINAL_CLOUD = pd.DataFrame(index=C_new.index)
 
 #match from Deal execution report
-FINAL_ON_PREM['Region L3'] = OP_new['Region L3']
-FINAL_ON_PREM['Company Name'] = OP_new['Company Name']
-FINAL_ON_PREM['Deal Size (EUR)'] = OP_new['Deal Size (EUR)']
-FINAL_ON_PREM['Amount'] = OP_new['Amount']
-FINAL_ON_PREM['Quarter'] = OP_new['Quarter']
-FINAL_ON_PREM['Opp Close Date'] = OP_new['Opp Close Date']
-FINAL_ON_PREM['Opp Description'] = OP_new['Opp Description']
+FINAL_ON_PREM['Region L3']          = OP_new['Region L3']
+FINAL_ON_PREM['Company Name']       = OP_new['Company Name']
+FINAL_ON_PREM['Deal Size (EUR)']    = OP_new['Deal Size (EUR)']
+FINAL_ON_PREM['Amount']             = OP_new['Amount']
+FINAL_ON_PREM['Quarter']            = OP_new['Quarter']
+FINAL_ON_PREM['Opp Close Date']     = OP_new['Opp Close Date']
+FINAL_ON_PREM['Opp Description']    = OP_new['Opp Description']
 FINAL_ON_PREM['Opp ID (Hyperlink)'] = OP_new.index
-FINAL_ON_PREM['FC Category'] = OP_new['FC Category']
+FINAL_ON_PREM['FC Category']        = OP_new['FC Category']
 #from old report
-FINAL_ON_PREM['Sales Manager PoV'] = Old_prem['Sales Manager PoV']
+FINAL_ON_PREM['Sales Manager PoV']  = Old_prem['Sales Manager PoV']
+FINAL_ON_PREM['BEC Engagement']     = ' '
 #continue from deal exectuion
 FINAL_ON_PREM['Distribution Channel'] = OP_new['Distribution Channel']
-FINAL_ON_PREM['Channel Partner'] = OP_new['Channel Partner']
-FINAL_ON_PREM['Opportunity Owner'] = OP_new['Opportunity Owner']
+FINAL_ON_PREM['Channel Partner']      = OP_new['Channel Partner']
+FINAL_ON_PREM['Opportunity Owner']    = OP_new['Opportunity Owner']
 #Net New Name
-FINAL_ON_PREM['Net New Name'] = NNN
+FINAL_ON_PREM['Net New Name']         = NNN
 #Match managers to Opportunity owner
-FINAL_ON_PREM['Manager'] = 0
+FINAL_ON_PREM['Manager']              = 0
 #continue match from Deal execution report
-FINAL_ON_PREM['Presales Lead Name'] = OP_new['Presales Lead Name']
-FINAL_ON_PREM['Lead Sales Bag'] = OP_new['Lead Sales Bag']
+FINAL_ON_PREM['Presales Lead Name']   = OP_new['Presales Lead Name']
+FINAL_ON_PREM['Lead Sales Bag']       = OP_new['Lead Sales Bag']
 #match from Investment resource report
 FINAL_ON_PREM['Number of MD from Field Presales'] = new_IR['Field Presales']
 FINAL_ON_PREM['Number of MD from GB Presales'] = new_IR['GB Presales']
@@ -128,6 +129,7 @@ FINAL_CLOUD['Opp ID (Hyperlink)'] = C_new.index
 FINAL_CLOUD['FC Category'] = C_new['FC Category']
 #From old report
 FINAL_CLOUD['Sales Manager PoV'] = Old_cloud['Sales Manager PoV']
+FINAL_CLOUD['BEC Engagement'] = ' '
 #Continue from deal exectuion
 FINAL_CLOUD['Distribution Channel'] = C_new['Distribution Channel']
 FINAL_CLOUD['Channel Partner'] = C_new['Channel Partner']

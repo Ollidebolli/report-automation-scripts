@@ -4,14 +4,15 @@ import pandas as pd
 import numpy as np
 import glob
 
-Alexandra = ['Tim Hatcher','Glenn Van Eijk','Conor Gribbin','Adriaan Welgraven','Flavio La Terza','Ouiam Haddou','Hamza BOULLOUS','Girish Kini']
-Veronica = ['Ayse Feyzanur Ermurat','Raffaele Talarico','Daniele Sarno','Francesc Callejas','Francesco Bastianello','Hur Bakan','Jorge Sanchez','Josefina Furrer','Josep Martin','Luca Fatigati','Marco De Rossi','Selene Hernandez']
-Alaa = ['Abdollah MOSTAFA','Ahmed ABDELAAL','Mariam YEHIA','Mohamed SADAT','Monica YOUSSEF','Obada SAYED','Samar ALEZABY','Clotilde Demeyer','Constance de Kertanguy','Ilias Bensaid','Vianney Dufour','Kim Do Tri']
+Alexandra = ['Tim Hatcher','Conor Gribbin','Adriaan Welgraven','Flavio La Terza','Ouiam Haddou','Hamza BOULLOUS','Girish Kini']
+Veronica =  ['Ayse Feyzanur Ermurat','Raffaele Talarico','Daniele Sarno','Francesc Callejas','Francesco Bastianello','Hur Bakan','Jorge Sanchez','Josefina Furrer','Josep Martin','Luca Fatigati','Marco De Rossi','Selene Hernandez','Raquel Lopez','Jonathan Soret']
+Alaa =      ['Abdollah MOSTAFA','Ahmed ABDELAAL','Mariam YEHIA','Mohamed SADAT','Monica YOUSSEF','Obada SAYED','Samar ALEZABY','Clotilde Demeyer','Ilias Bensaid','Vianney Dufour','Kim Do Tri']
 
 quarters = ['2020-Q1','2020-Q2','2020-Q3','2020-Q4','2021-Q1','2021-Q2']
 
 names = Alaa + Alexandra + Veronica
 
+#function that shifts columns, needed to make things look good when putting in excel
 def shift(df, name):
     df[name] = df.index
     return df[list(df.columns)[-1:] + list(df.columns)[:-1]]
@@ -24,14 +25,28 @@ OP = pd.read_csv(glob.glob('*(OP)' + '*.csv')[0])
 CL = pd.read_csv(glob.glob('*(CL)' + '*.csv')[0])
 
 #Open investment Resource report and change the new labeling of quarters from YYYYQ.0 to YYYY-Q
-IR = pd.read_csv(glob.glob('*Resource' + '*.csv')[0], low_memory=False)
+IR = pd.read_csv(glob.glob('*Employee' + '*.csv')[0], low_memory=False)
 IR['Investment Quarter'] = IR['Investment Quarter'].fillna(0).apply(lambda x: str(int(x))[:4] + '-Q' + str(int(x))[-1] if (x != 0) else ' ')
 
 #Open Missing hours report
 MH = pd.read_csv(glob.glob('*Missing' + '*.csv')[0])
 
-#Open Activity analysis report
-AA = pd.read_csv(glob.glob('*Time Recorded' + '*.csv')[0])
+#Open Activity analysis/ Time record analysis report
+TR = pd.read_csv(glob.glob('*Time Recorded' + '*.csv')[0])
+
+#sort the AA so you get all ratios needed from the data
+#Create a table with multiindex that has every name for every quarter
+AA = pd.DataFrame(index=pd.MultiIndex.from_product([np.sort(TR["Year-Quarter YYYY-'Q'Q"].unique()),TR['Employee Name'].unique()], names=['Quarter', 'Employee Name']))
+#Get Utilization rate
+UTI = TR.groupby(["Year-Quarter YYYY-'Q'Q",'Employee Name'])[['Actual Capacity Days','Utilized Days']].sum()
+AA['Utilization'] = UTI['Utilized Days'] / UTI['Actual Capacity Days']
+#Get the deal support rate
+task_types = ['Opportunity Support - Prep','Opportunity Support - CF','RFx']
+AA['Deal support Rate'] = TR[np.isin(TR['Task Type'],task_types)].groupby(["Year-Quarter YYYY-'Q'Q",'Employee Name'])['Time Recorded Days'].sum() / UTI['Actual Capacity Days']
+#Get the demand generation/bussiness development rate
+task_types = ['Business Development - Prep','Business Development - CF']
+AA['Demand Generation']  = TR[np.isin(TR['Task Type'],task_types)].groupby(["Year-Quarter YYYY-'Q'Q",'Employee Name'])['Time Recorded Days'].sum() / UTI['Actual Capacity Days']
+AA.reset_index(inplace=True)
 
 #Sort Pipeline support report, drop last row, combine them together etc etc
 OP.drop(OP.tail(1).index,inplace=True)
@@ -186,7 +201,6 @@ for name in names:
         productivity = pd.DataFrame(columns=quarters, index=['Utilization Rate - >75%','Deal Support Rate - >60%','Business Dev Rate - >15%','Nber of Missing Hours','Minimum MD','Maximum MD','Average MD','# Dry runs','# Reusable assets','# on-site customer meetings','# Enablement sessions','# Demand Generation events'])
 
         #Makes sure AA is in right order in case of weird extract (just in case)
-        AA = AA[['Quarter', 'Employee Name', 'Utilization %','Total Deal Execution Utilization', 'Business Development Utilization']]
         AA_name = AA[AA['Employee Name'] == name].set_index('Quarter').transpose()
 
         #put in bus dev and uti rates and turn them into percentages
@@ -210,7 +224,7 @@ for name in names:
         productivity.iloc[6] = name_MD.mean()
 
 
-        #Make index into a columns and put it first so that index has a label
+        #Make index into columns and put it first so that index has a label
         pipeline = shift(pipeline, 'Your Current Pipeline')
         contribution = shift(contribution, 'Your Current Contribution To Closed Revenue')
         top_countries = shift(top_countries, 'Distribution of your support by MU')
