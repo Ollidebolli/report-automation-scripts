@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import glob
 
 #open current report (should set header to row to as first row is usually empty)
 
@@ -17,27 +18,31 @@ if str(C_new['Opp ID (Hyperlink)'][C_new.index[0]])[0] != '0':
     C_new['Opp ID (Hyperlink)'] = C_new['Opp ID (Hyperlink)'].apply(lambda x: str(x).zfill(len(str(x))+1))
     C_new['Opp ID (Hyperlink)'] = C_new['Opp ID (Hyperlink)'].apply(lambda x: x[:-2])
 
+#set index for easy joining and remove deuplicate axis
 OP_new.set_index('Opp ID (Hyperlink)', inplace=True)
 C_new.set_index('Opp ID (Hyperlink)', inplace=True)
+OP_new = OP_new[~OP_new.index.duplicated()]
+C_new = C_new[~C_new.index.duplicated()]
 
-Resource = pd.read_csv('Presales Investment - Employee Details.csv')
+#Get the presales investment details
+df = pd.read_csv(glob.glob('Employee* *.csv')[0],header= 1)
+cols = df.columns[-1:]
+df.rename(columns={cols[0]:"Time Days",}, inplace = True)
+
+Resource = df
 
 Managers = np.array(['Veronica Bastianon', 'Alaa ELGANAGY', 'Alexandra Jovovic'])
-Nature = np.where(np.isin(Resource['Employee Manager'], Managers) == True, 'GB Presales','Field Presales')
+Nature = np.where(np.isin(Resource['Manager Name'], Managers) == True, 'GB Presales','Field Presales')
 Resource['NATURE'] = Nature
 
-#Create a pivot table thats sorts working hours based on field or GB
-pivot = pd.pivot_table(Resource, values='Time Recorded Days',columns='NATURE', index='Opportunity Id', aggfunc=np.sum)
-new_IR = pd.DataFrame()
-new_IR['op id'] = pivot.index
-new_IR['Field Presales'] = pivot['Field Presales'].to_numpy()
-new_IR['GB Presales'] = pivot['GB Presales'].to_numpy()
+#Create a table thats sorts working hours based on field or GB
+new_IR = Resource.groupby(['Opportunity Id','NATURE'])['Time Days'].sum().unstack()
 
 # check if first is 0 else change
-if str(new_IR['op id'][0])[0] != '0':
-    new_IR['op id'] = new_IR['op id'].apply(lambda x: str(x).zfill(len(str(x))+1))
-#set index to op id
-new_IR.set_index('op id', inplace= True)
+if str(new_IR.index[0])[0] != '0':
+    new_IR.index = pd.Series(new_IR.index).apply(lambda x: str(x).zfill(len(str(x))+1))
+    
+new_IR = new_IR[~new_IR.index.duplicated()]
 
 POP = pd.read_csv('Presales Individual lvl (OP).csv')
 PCL = pd.read_csv('Presales Individual lvl (CL).csv')
@@ -92,9 +97,6 @@ FINAL_ON_PREM['Opp Close Date']     = OP_new['Opp Close Date']
 FINAL_ON_PREM['Opp Description']    = OP_new['Opp Description']
 FINAL_ON_PREM['Opp ID (Hyperlink)'] = OP_new.index
 FINAL_ON_PREM['FC Category']        = OP_new['FC Category']
-#from old report
-FINAL_ON_PREM['Sales Manager PoV']  = Old_prem['Sales Manager PoV']
-FINAL_ON_PREM['BEC Engagement']     = ' '
 #continue from deal exectuion
 FINAL_ON_PREM['Distribution Channel'] = OP_new['Distribution Channel']
 FINAL_ON_PREM['Channel Partner']      = OP_new['Channel Partner']
@@ -102,7 +104,7 @@ FINAL_ON_PREM['Opportunity Owner']    = OP_new['Opportunity Owner']
 #Net New Name
 FINAL_ON_PREM['Net New Name']         = NNN
 #Match managers to Opportunity owner
-FINAL_ON_PREM['Manager']              = 0
+FINAL_ON_PREM['Manager']              = ' '
 #continue match from Deal execution report
 FINAL_ON_PREM['Presales Lead Name']   = OP_new['Presales Lead Name']
 FINAL_ON_PREM['Lead Sales Bag']       = OP_new['Lead Sales Bag']
@@ -127,9 +129,6 @@ FINAL_CLOUD['Opp Close Date'] = C_new['Opp Close Date']
 FINAL_CLOUD['Opp Description'] = C_new['Opp Description']
 FINAL_CLOUD['Opp ID (Hyperlink)'] = C_new.index
 FINAL_CLOUD['FC Category'] = C_new['FC Category']
-#From old report
-FINAL_CLOUD['Sales Manager PoV'] = Old_cloud['Sales Manager PoV']
-FINAL_CLOUD['BEC Engagement'] = ' '
 #Continue from deal exectuion
 FINAL_CLOUD['Distribution Channel'] = C_new['Distribution Channel']
 FINAL_CLOUD['Channel Partner'] = C_new['Channel Partner']
@@ -137,7 +136,7 @@ FINAL_CLOUD['Opportunity Owner'] = C_new['Opportunity Owner']
 #Net New Name
 FINAL_CLOUD['Net New Name'] = NNN
 #Match managers to Opportunity owner
-FINAL_CLOUD['Manager'] = 0
+FINAL_CLOUD['Manager'] = ' '
 #continue match from Deal execution report
 FINAL_CLOUD['Presales Lead Name'] = C_new['Presales Lead Name']
 FINAL_CLOUD['Lead Sales Bag'] = C_new['Lead Sales Bag']

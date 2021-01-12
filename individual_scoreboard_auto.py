@@ -2,7 +2,11 @@ import pandas as pd
 import numpy as np
 import glob
 
-quarter = input('what quarter ? (YYYY-QQ) : ' )
+def date_format(series):
+    """Changes the format to 'YYYY-Q' from YYYYQ"""
+    return series.fillna(0).apply(lambda x: str(int(x))[:4] + '-Q' + str(int(x))[-1] if (x != 0) else ' ')
+
+quarter = input('what quarter do you want YYYY-Q')
 
 #Open Pipeline supprt reports
 OP = pd.read_csv(glob.glob('*(OP)' + '*.csv')[0])
@@ -59,37 +63,46 @@ template['# deals won']                                            = Q['won']
 template['# deals lost or discontinued']                           = Q['lost']
 template['Win rate'] = template['# deals won'] / (template['# deals won'] + template['# deals lost or discontinued']) 
 
-data = pd.read_csv('Presales Investment - Employee Details.csv')
-data['Investment Quarter'] = data['Investment Quarter'].fillna(0).apply(lambda x: str(int(x))[:4] + '-Q' + str(int(x))[-1] if (x != 0) else ' ')
+#Open investment Resource report 
+IR = pd.read_csv(glob.glob('*Employee' + '*.csv')[0],header= 1, low_memory = False)
+cols = IR.columns[-1:]
+IR.rename(columns={cols[0]:"Time Days",}, inplace = True)
+IR['Investment Quarter'] = date_format(IR['Investment Quarter'])
 
 #get rid of rows that arent related to our managers
 Managers = np.array(['Veronica Bastianon', 'Alaa ELGANAGY','Alexandra Jovovic'])
-data = data[np.isin(data['Employee Manager'], Managers)]
+IR = IR[np.isin(IR['Manager Name'], Managers)]
 
-data = data[np.isin(data['Investment Quarter'], quarter)]
+IR = IR[np.isin(IR['Investment Quarter'], quarter)]
 
-customers = data.groupby('Employee Name')['Opportunity Id','Global Ultimate Name'].nunique()
+customers = IR.groupby('Employee Name')['Opportunity Id','Opp Global Ultimate Name'].nunique()
 
 #create a filter and get all the customer facing deals sorted by name
 customer_facing_filter = np.array(['Business Development - CF','Opportunity Support - CF','Consumption & Renewal - CF'])
-customer_facing = data[np.isin(data['Task Type Desc'], customer_facing_filter)].groupby('Employee Name')['Task Type Desc'].count()
+customer_facing = IR[np.isin(IR['Task Type Desc'], customer_facing_filter)].groupby('Employee Name')['Task Type Desc'].count()
 
 #create a filter and get days invested
 days_invested_filter = np.array(['Opportunity Support - CF','Opportunity Support - Prep','POC','RFx'])
-days_invested = data[np.isin(data['Task Type Desc'], days_invested_filter)].groupby('Employee Name')['Time Recorded Days'].sum()
+days_invested = IR[np.isin(IR['Task Type Desc'], days_invested_filter)].groupby('Employee Name')['Time Days'].sum()
 
 #put in the rest of the stuff, last two are series becuase they needed differnet filtering.
 template['# Deals supported']              = customers['Opportunity Id']
-template['# touched customers']            = customers['Global Ultimate Name']
+template['# touched customers']            = customers['Opp Global Ultimate Name']
 template['# Customer facing interactions'] = customer_facing
 template['Days invested in deal support']  = days_invested
 
 template['Average days per deal '] =  template['Days invested in deal support'] / template['# Deals supported']
 template['Average days per customer'] =  template['Days invested in deal support'] / template['# touched customers']
 
-TR = pd.read_csv(glob.glob('*Time Recorded' + '*.csv')[0])
+#Open Activity analysis/ Time record analysis report,read data and sort table columns etc
+TR = pd.read_csv(glob.glob('*Time Recorded' + '*.csv')[0],header=1)
+cols = TR.columns[-3:]
+TR.rename(columns={cols[0]:"Actual Capacity Days",
+                   cols[1]:"Time Recorded Days",
+                   cols[2]:"Utilized Days",}, inplace = True)
 #sort the AA so you get all ratios needed from the data
 #Create a table with multiindex that has every name for every quarter
+
 AA = pd.DataFrame(index=pd.MultiIndex.from_product([np.sort(TR["Year-Quarter YYYY-'Q'Q"].unique()),TR['Employee Name'].unique()], names=['Quarter', 'Employee Name']))
 #Get Utilization rate
 UTI = TR.groupby(["Year-Quarter YYYY-'Q'Q",'Employee Name'])[['Actual Capacity Days','Utilized Days']].sum()
@@ -108,7 +121,11 @@ template['Utilization in %']  = performance['Utilization']
 template['Deal support in %'] = performance['Deal support Rate']
 template['Bus. Dev in %']     = performance['Demand Generation']
 
-MH = pd.read_csv('Presales Missing Hours - Details.csv')
+#Open Missing hours report
+MH = pd.read_csv(glob.glob('*Missing' + '*.csv')[0], header=1)
+cols = MH.columns[-1:]
+MH.rename(columns={cols[0]:"Missing Hours"}, inplace = True)
+
 MH = MH[MH["Year-Quarter YYYY-'Q'Q"] == quarter].set_index('Employee Name')
 
 template['Missing hours at end of quarter'] = MH['Missing Hours']

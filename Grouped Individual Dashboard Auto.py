@@ -1,5 +1,4 @@
 #Before you run this file you should have the BUD.xlsx file in the same folder and a folder named "Individual"
-
 import pandas as pd 
 import numpy as np
 import glob
@@ -12,10 +11,14 @@ quarters = ['2020-Q1','2020-Q2','2020-Q3','2020-Q4','2021-Q1','2021-Q2']
 
 names = Alaa + Alexandra + Veronica
 
-#function that shifts columns, needed to make things look good when putting in excel
 def shift(df, name):
+    """function that shifts columns, needed to make things look good when putting in excel"""
     df[name] = df.index
     return df[list(df.columns)[-1:] + list(df.columns)[:-1]]
+
+def date_format(series):
+    """Changes the format to 'YYYY-Q' from YYYYQ"""
+    return series.fillna(0).apply(lambda x: str(int(x))[:4] + '-Q' + str(int(x))[-1] if (x != 0) else ' ')
 
 #Open BUD file
 bud = pd.read_excel(glob.glob('*BUD' + '*.xlsx')[0])
@@ -24,42 +27,49 @@ bud = pd.read_excel(glob.glob('*BUD' + '*.xlsx')[0])
 OP = pd.read_csv(glob.glob('*(OP)' + '*.csv')[0])
 CL = pd.read_csv(glob.glob('*(CL)' + '*.csv')[0])
 
-#Open investment Resource report and change the new labeling of quarters from YYYYQ.0 to YYYY-Q
-IR = pd.read_csv(glob.glob('*Employee' + '*.csv')[0], low_memory=False)
-IR['Investment Quarter'] = IR['Investment Quarter'].fillna(0).apply(lambda x: str(int(x))[:4] + '-Q' + str(int(x))[-1] if (x != 0) else ' ')
+#Open investment Resource report 
+IR = pd.read_csv(glob.glob('*Employee' + '*.csv')[0],header= 1, low_memory = False)
+cols = IR.columns[-1:]
+IR.rename(columns={cols[0]:"Time Days",}, inplace = True)
+IR['Investment Quarter'] = date_format(IR['Investment Quarter'])
 
 #Open Missing hours report
-MH = pd.read_csv(glob.glob('*Missing' + '*.csv')[0])
+MH = pd.read_csv(glob.glob('*Missing' + '*.csv')[0], header=1)
+cols = MH.columns[-1:]
+MH.rename(columns={cols[0]:"Missing Hours"}, inplace = True)
 
-#Open Activity analysis/ Time record analysis report
-TR = pd.read_csv(glob.glob('*Time Recorded' + '*.csv')[0])
+#Open Activity analysis/ Time record analysis report,read data and sort table columns etc
+df = pd.read_csv(glob.glob('*Time Recorded' + '*.csv')[0],header=1)
+cols = df.columns[-3:]
+df.rename(columns={cols[0]:"Actual Capacity Days",
+                   cols[1]:"Time Recorded Days",
+                   cols[2]:"Utilized Days",}, inplace = True)
 
-#sort the AA so you get all ratios needed from the data
 #Create a table with multiindex that has every name for every quarter
-AA = pd.DataFrame(index=pd.MultiIndex.from_product([np.sort(TR["Year-Quarter YYYY-'Q'Q"].unique()),TR['Employee Name'].unique()], names=['Quarter', 'Employee Name']))
+AA = pd.DataFrame(index=pd.MultiIndex.from_product([np.sort(df["Year-Quarter YYYY-'Q'Q"].unique()),df['Employee Name'].unique()], names=['Quarter', 'Employee Name']))
 #Get Utilization rate
-UTI = TR.groupby(["Year-Quarter YYYY-'Q'Q",'Employee Name'])[['Actual Capacity Days','Utilized Days']].sum()
+UTI = df.groupby(["Year-Quarter YYYY-'Q'Q",'Employee Name'])[['Actual Capacity Days','Utilized Days']].sum()
 AA['Utilization'] = UTI['Utilized Days'] / UTI['Actual Capacity Days']
 #Get the deal support rate
 task_types = ['Opportunity Support - Prep','Opportunity Support - CF','RFx']
-AA['Deal support Rate'] = TR[np.isin(TR['Task Type'],task_types)].groupby(["Year-Quarter YYYY-'Q'Q",'Employee Name'])['Time Recorded Days'].sum() / UTI['Actual Capacity Days']
+AA['Deal support Rate'] = df[np.isin(df['Task Type'],task_types)].groupby(["Year-Quarter YYYY-'Q'Q",'Employee Name'])['Time Recorded Days'].sum() / UTI['Actual Capacity Days']
 #Get the demand generation/bussiness development rate
 task_types = ['Business Development - Prep','Business Development - CF']
-AA['Demand Generation']  = TR[np.isin(TR['Task Type'],task_types)].groupby(["Year-Quarter YYYY-'Q'Q",'Employee Name'])['Time Recorded Days'].sum() / UTI['Actual Capacity Days']
+AA['Demand Generation']  = df[np.isin(df['Task Type'],task_types)].groupby(["Year-Quarter YYYY-'Q'Q",'Employee Name'])['Time Recorded Days'].sum() / UTI['Actual Capacity Days']
 AA.reset_index(inplace=True)
 
 #Sort Pipeline support report, drop last row, combine them together etc etc
 OP.drop(OP.tail(1).index,inplace=True)
 CL.drop(CL.tail(1).index,inplace=True)
-
 OP['nature'] = 'on prem'
 CL['nature'] = 'cloud'
 #set index so that we can concatenate
 CL.set_index(np.arange(len(OP.index),len(OP.index)+len(CL.index)),inplace=True)
 #column names are different (capital C)
 OP.rename(columns={'DRM category':'DRM Category'}, inplace=True)
-OPCL = pd.concat([OP,CL], sort=False)
+OPCL = pd.concat([OP,CL], ignore_index=True, sort=False)
 
+#there is probably better way of doing this but it works :)
 def make_all_float(column):
     L = []
     for a,i in column.fillna(0).iteritems():
@@ -138,7 +148,7 @@ for name in names:
 
         try:
             #Find top countries where time is spent and sort them by current quarter and % out of total time spent.
-            countries = pd.DataFrame(IRN.groupby(['Opp Close Quarter', 'Market Unit'])['Time Recorded Days'].sum()).unstack(0)
+            countries = pd.DataFrame(IRN.groupby(['Investment Quarter', 'MU'])['Time Days'].sum()).unstack(0)
             countries.columns = countries.columns.droplevel()
             countries.sort_values(by=countries.columns[0], ascending=False, inplace=True)
             countries = countries / countries.sum(axis=0) * 100
@@ -178,7 +188,7 @@ for name in names:
         
         #get deal impact
         supported = pd.DataFrame(IRN.groupby(['Investment Quarter'])['Opportunity Id'].nunique()).transpose()
-        touched = pd.DataFrame(IRN.groupby(['Investment Quarter'])['Global Ultimate Name'].nunique()).transpose()
+        touched = pd.DataFrame(IRN.groupby(['Investment Quarter'])['Opp Global Ultimate Name'].nunique()).transpose()
         customer_facing_filter = np.array(['Business Development - CF','Opportunity Support - CF','Consumption & Renewal - CF'])
         customer_facing = IRN[np.isin(IRN['Task Type Desc'], customer_facing_filter)].groupby('Investment Quarter')['Task Type Desc'].count()
 
@@ -218,7 +228,7 @@ for name in names:
         productivity.iloc[3] = MH_name.iloc[1]
 
         #min max and average MD
-        name_MD = IRN.groupby(['Investment Quarter','Global Ultimate Name'])['Time Recorded Days'].sum().unstack(0)
+        name_MD = IRN.groupby(['Investment Quarter','Opp Global Ultimate Name'])['Time Days'].sum().unstack(0)
         productivity.iloc[4] = name_MD.min()
         productivity.iloc[5] = name_MD.max()
         productivity.iloc[6] = name_MD.mean()
@@ -232,7 +242,6 @@ for name in names:
         top_lost = shift(top_lost, 'Opp Owner where you had the most lost deals')
         deal_impact = shift(deal_impact, 'Your deal impact')
         productivity = shift(productivity, 'Your productivity')
-
 
 
         worksheet = workbook.add_worksheet(name)
